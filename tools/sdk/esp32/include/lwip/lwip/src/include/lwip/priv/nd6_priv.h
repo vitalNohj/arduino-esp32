@@ -94,6 +94,7 @@ struct nd6_destination_cache_entry {
   ip6_addr_t destination_addr;
   ip6_addr_t next_hop_addr;
   u16_t pmtu;
+  u8_t cached_neighbor_idx;
   u32_t age;
 };
 
@@ -103,10 +104,20 @@ struct nd6_prefix_list_entry {
   u32_t invalidation_timer; /* in seconds */
 };
 
+struct nd6_route_list_entry {
+    ip6_addr_t prefix;
+    u8_t prefix_len;
+    u8_t preference;
+    s8_t router_list_entry_index;
+    struct netif* netif;
+    u32_t invalidation_timer; /* in seconds */
+};
+
 struct nd6_router_list_entry {
   struct nd6_neighbor_cache_entry *neighbor_entry;
   u32_t invalidation_timer; /* in seconds */
   u8_t flags;
+  s8_t route_list_entry_index;
 };
 
 enum nd6_neighbor_cache_entry_state {

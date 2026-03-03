@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef __ESP_BLUFI_H__
 #define __ESP_BLUFI_H__
 
@@ -6,11 +12,16 @@
 
 #ifdef CONFIG_BT_NIMBLE_ENABLED
 #include "nimble/ble.h"
+#include "host/ble_gap.h"
 #include "modlog/modlog.h"
 #endif
 
 #ifdef CONFIG_BT_BLUEDROID_ENABLED
 #include "esp_gap_ble_api.h"
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #define BLUFI_APP_UUID      0xFFFF
@@ -33,7 +44,9 @@ void esp_blufi_gatt_svr_register_cb(struct ble_gatt_register_ctxt *ctxt, void *a
 
 /* Initialise gatt server */
 int esp_blufi_gatt_svr_init(void);
+int esp_blufi_gatt_svr_deinit(void);
 void esp_blufi_btc_init(void);
+void esp_blufi_btc_deinit(void);
 #endif
 
 #ifdef CONFIG_BT_BLUEDROID_ENABLED
@@ -72,6 +85,42 @@ void esp_blufi_adv_stop(void);
 /* Start advertisement */
 void esp_blufi_adv_start(void);
 
+/* Start advertisement with specified name. if the name is NULL just start advertisement */
+void esp_blufi_adv_start_with_name(const char *name);
+
 void esp_blufi_send_encap(void *arg);
 
+/*
+ * @brief Initiate BLE security request with the connected peer device.
+ *
+ * This function triggers the BLE Security Manager Protocol (SMP) procedure
+ * to establish a secure, encrypted connection with the specified remote device.
+ * It should be called after a BLE connection is established.
+ *
+ * @param[in] remote_bda  Bluetooth device address of the connected peer.
+ *
+ * @return
+ *     - ESP_OK: Security request initiated successfully
+ *     - ESP_FAIL: Security request failed
+ *     - ESP_ERR_INVALID_STATE: BluFi BLE SMP is not enabled
+ */
+esp_err_t esp_blufi_start_security_request(esp_blufi_bd_addr_t remote_bda);
+
+#ifdef CONFIG_BT_NIMBLE_ENABLED
+/**
+ * @brief Handle gap event for BluFi.
+ *        This function can be called inside custom use gap event handler.
+ *        It provide minimal event management for BluFi purpose.
+ *
+ * @param[in] event The type of event being signalled.
+ * @param[in] arg Application-specified argument. Currently unused
+ * @return int 0 in case of success.
+ *             Other in case of failure.
+ */
+int esp_blufi_handle_gap_events(struct ble_gap_event *event, void *arg);
+#endif
+
+#ifdef __cplusplus
+}
+#endif
 #endif/* _ESP_BLUFI_ */

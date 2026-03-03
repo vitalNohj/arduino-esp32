@@ -1,16 +1,8 @@
-// Copyright 2018 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2018-2024 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #ifndef __ESP_PLATFORM_PTHREAD_H__
 #define __ESP_PLATFORM_PTHREAD_H__
 
@@ -27,6 +19,18 @@ extern "C" {
 int pthread_condattr_getclock(const pthread_condattr_t * attr, clockid_t * clock_id);
 
 int pthread_condattr_setclock(pthread_condattr_t *attr, clockid_t clock_id);
+
+/* Dynamic Thread Scheduling Parameters Access */
+int pthread_getschedparam(pthread_t thread, int *policy, struct sched_param *param);
+
+int pthread_setschedparam(pthread_t thread, int policy, const struct sched_param *param);
+
+/* Set Scheduling Priority of a Thread */
+int pthread_setschedprio(pthread_t thread, int prio);
+
+int sched_get_priority_min(int policy);
+
+int sched_get_priority_max(int policy);
 
 #ifdef __cplusplus
 }

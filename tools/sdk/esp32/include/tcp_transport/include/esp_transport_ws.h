@@ -14,6 +14,7 @@
 extern "C" {
 #endif
 
+
 typedef enum ws_transport_opcodes {
     WS_TRANSPORT_OPCODES_CONT =  0x00,
     WS_TRANSPORT_OPCODES_TEXT =  0x01,
@@ -34,6 +35,7 @@ typedef struct {
     const char *sub_protocol;               /*!< WS subprotocol */
     const char *user_agent;                 /*!< WS user agent */
     const char *headers;                    /*!< WS additional headers */
+    const char *auth;                       /*!< HTTP authorization header */
     bool        propagate_control_frames;   /*!< If true, control frames are passed to the reader
                                              *   If false, only user frames are propagated, control frames are handled
                                              *   automatically during read operations
@@ -94,6 +96,18 @@ esp_err_t esp_transport_ws_set_user_agent(esp_transport_handle_t t, const char *
 esp_err_t esp_transport_ws_set_headers(esp_transport_handle_t t, const char *headers);
 
 /**
+ * @brief               Set websocket authorization headers
+ *
+ * @param t             websocket transport handle
+ * @param sub_protocol  The HTTP authorization header string, set NULL to clear the old value
+ *
+ * @return
+ *      - ESP_OK on success
+ *      - One of the error codes
+ */
+esp_err_t esp_transport_ws_set_auth(esp_transport_handle_t t, const char *auth);
+
+/**
  * @brief               Set websocket transport parameters
  *
  * @param t             websocket transport handle
@@ -125,6 +139,40 @@ esp_err_t esp_transport_ws_set_config(esp_transport_handle_t t, const esp_transp
  *  - (-1) if there are any errors, should check errno
  */
 int esp_transport_ws_send_raw(esp_transport_handle_t t, ws_transport_opcodes_t opcode, const char *b, int len, int timeout_ms);
+
+/**
+ * @brief               Returns websocket fin flag for last received data
+ *
+ * @param t             websocket transport handle
+ *
+ * @return
+ *      - Fin flag as a boolean
+ */
+bool esp_transport_ws_get_fin_flag(esp_transport_handle_t t);
+
+/**
+ * @brief               Returns the HTTP status code of the websocket handshake
+ *
+ * This API should be called after the connection attempt otherwise its result is meaningless
+ *
+ * @param t             websocket transport handle
+ *
+ * @return
+ *      -Response status code
+ *      -1 on failure
+ */
+int esp_transport_ws_get_upgrade_request_status(esp_transport_handle_t t);
+
+/**
+ * @brief               Returns websocket redir host for the last connection attempt
+ *
+ * @param t             websocket transport handle
+ *
+ * @return
+ *      - URI of the redirection host
+ *      - NULL if no redirection was attempted
+ */
+char* esp_transport_ws_get_redir_uri(esp_transport_handle_t t);
 
 /**
  * @brief               Returns websocket op-code for last received data

@@ -1,11 +1,10 @@
 /*
- * SPDX-FileCopyrightText: 2015-2021 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef _SOC_PERIPH_DEFS_H_
-#define _SOC_PERIPH_DEFS_H_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,11 +46,10 @@ typedef enum {
     PERIPH_SHA_MODULE,
     PERIPH_RSA_MODULE,
     PERIPH_SARADC_MODULE,
+    PERIPH_PHY_CALIBRATION_MODULE,
     PERIPH_MODULE_MAX
 } periph_module_t;
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* _SOC_PERIPH_DEFS_H_ */

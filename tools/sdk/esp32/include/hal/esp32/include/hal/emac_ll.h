@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2021 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,11 +15,14 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "hal/misc.h"
 #include "hal/eth_types.h"
 #include "soc/emac_dma_struct.h"
 #include "soc/emac_mac_struct.h"
 #include "soc/emac_ext_struct.h"
+#include "soc/dport_reg.h"
+#include "soc/clk_tree_defs.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,19 +89,6 @@ extern "C" {
 #define EMAC_LL_DMA_ARBITRATION_ROUNDROBIN_RXTX_3_1 (2)
 #define EMAC_LL_DMA_ARBITRATION_ROUNDROBIN_RXTX_4_1 (3)
 
-/* PTP register bits */
-#define EMAC_LL_DMAPTPRXDESC_PTPMT_SYNC 0x00000100U                      /* SYNC message (all clock types) */
-#define EMAC_LL_DMAPTPRXDESC_PTPMT_FOLLOWUP 0x00000200U                  /* FollowUp message (all clock types) */
-#define EMAC_LL_DMAPTPRXDESC_PTPMT_DELAYREQ 0x00000300U                  /* DelayReq message (all clock types) */
-#define EMAC_LL_DMAPTPRXDESC_PTPMT_DELAYRESP 0x00000400U                 /* DelayResp message (all clock types) */
-#define EMAC_LL_DMAPTPRXDESC_PTPMT_PDELAYREQ_ANNOUNCE 0x00000500U        /* PdelayReq message (peer-to-peer transparent clock) or Announce message (Ordinary or Boundary clock) */
-#define EMAC_LL_DMAPTPRXDESC_PTPMT_PDELAYRESP_MANAG 0x00000600U          /* PdelayResp message (peer-to-peer transparent clock) or Management message (Ordinary or Boundary clock)  */
-#define EMAC_LL_DMAPTPRXDESC_PTPMT_PDELAYRESPFOLLOWUP_SIGNAL 0x00000700U /* PdelayRespFollowUp message (peer-to-peer transparent clock) or Signaling message (Ordinary or Boundary clock) */
-
-#define EMAC_LL_DMAPTPRXDESC_IPPT_UDP 0x00000001U  /* UDP payload encapsulated in the IP datagram */
-#define EMAC_LL_DMAPTPRXDESC_IPPT_TCP 0x00000002U  /* TCP payload encapsulated in the IP datagram */
-#define EMAC_LL_DMAPTPRXDESC_IPPT_ICMP 0x00000003U /* ICMP payload encapsulated in the IP datagram */
-
 #define EMAC_LL_DMADESC_OWNER_CPU  (0)
 #define EMAC_LL_DMADESC_OWNER_DMA  (1)
 
@@ -140,6 +130,44 @@ extern "C" {
 
 /* Enable needed interrupts (recv/recv_buf_unavailabal/normal must be enabled to make eth work) */
 #define EMAC_LL_CONFIG_ENABLE_INTR_MASK    (EMAC_LL_INTR_RECEIVE_ENABLE | EMAC_LL_INTR_NORMAL_SUMMARY_ENABLE)
+
+/* Maximum number of MAC address to be filtered */
+#define EMAC_LL_MAX_MAC_ADDR_NUM 8
+
+/**
+ * @brief Enable the bus clock for the EMAC module
+ *
+ * @param group_id Group ID
+ * @param enable true to enable, false to disable
+ */
+static inline void emac_ll_enable_bus_clock(int group_id, bool enable)
+{
+    (void)group_id;
+    uint32_t reg_val = DPORT_READ_PERI_REG(DPORT_WIFI_CLK_EN_REG);
+    reg_val &= ~DPORT_WIFI_CLK_EMAC_EN;
+    reg_val |= enable << 14;
+    DPORT_WRITE_PERI_REG(DPORT_WIFI_CLK_EN_REG, reg_val);
+}
+
+/// use a macro to wrap the function, force the caller to use it in a critical section
+/// the critical section needs to declare the __DECLARE_RCC_ATOMIC_ENV variable in advance
+#define emac_ll_enable_bus_clock(...) (void)__DECLARE_RCC_ATOMIC_ENV; emac_ll_enable_bus_clock(__VA_ARGS__)
+
+/**
+ * @brief Reset the EMAC module
+ *
+ * @param group_id Group ID
+ */
+static inline void emac_ll_reset_register(int group_id)
+{
+    (void)group_id;
+    DPORT_WRITE_PERI_REG(DPORT_CORE_RST_EN_REG, DPORT_EMAC_RST);
+    DPORT_WRITE_PERI_REG(DPORT_CORE_RST_EN_REG, 0);
+}
+
+/// use a macro to wrap the function, force the caller to use it in a critical section
+/// the critical section needs to declare the __DECLARE_RCC_ATOMIC_ENV variable in advance
+#define emac_ll_reset_register(...) (void)__DECLARE_RCC_ATOMIC_ENV; emac_ll_reset_register(__VA_ARGS__)
 
 /************** Start of mac regs operation ********************/
 /* emacgmiiaddr */
@@ -241,7 +269,7 @@ static inline void emac_ll_set_back_off_limit(emac_mac_dev_t *mac_regs, uint32_t
 
 static inline void emac_ll_deferral_check_enable(emac_mac_dev_t *mac_regs, bool enable)
 {
-    mac_regs->gmacconfig.padcrcstrip = enable;
+    mac_regs->gmacconfig.deferralcheck = enable;
 }
 
 static inline void emac_ll_set_preamble_length(emac_mac_dev_t *mac_regs, uint32_t len)
@@ -342,6 +370,16 @@ static inline uint32_t emac_ll_transmit_frame_ctrl_status(emac_mac_dev_t *mac_re
     return mac_regs->emacdebug.mactfcs;
 }
 
+static inline uint32_t emac_ll_receive_read_ctrl_state(emac_mac_dev_t *mac_regs)
+{
+    return mac_regs->emacdebug.mtlrfrcs;
+}
+
+static inline uint32_t emac_ll_read_debug_reg(emac_mac_dev_t *mac_regs)
+{
+    return mac_regs->emacdebug.val;
+}
+
 /* emacmiidata */
 static inline void emac_ll_set_phy_data(emac_mac_dev_t *mac_regs, uint32_t data)
 {
@@ -359,9 +397,51 @@ static inline void emac_ll_set_addr(emac_mac_dev_t *mac_regs, const uint8_t *add
     HAL_FORCE_MODIFY_U32_REG_FIELD(mac_regs->emacaddr0high, address0_hi, (addr[5] << 8) | addr[4]);
     mac_regs->emacaddr0low = (addr[3] << 24) | (addr[2] << 16) | (addr[1] << 8) | (addr[0]);
 }
+
+/* emacaddrN */
+static inline void emac_ll_add_addr_filter(emac_mac_dev_t *mac_regs, uint8_t addr_num, const uint8_t *mac_addr, uint8_t mask, bool filter_for_source)
+{
+    addr_num = addr_num - 1; // MAC Address1 is located at emacaddr[0]
+
+    HAL_FORCE_MODIFY_U32_REG_FIELD(mac_regs->emacaddr[addr_num].emacaddrhigh, mac_address_hi, (mac_addr[5] << 8) | mac_addr[4]);
+    mac_regs->emacaddr[addr_num].emacaddrhigh.mask_byte_control = mask;
+    mac_regs->emacaddr[addr_num].emacaddrhigh.source_address = filter_for_source;
+    mac_regs->emacaddr[addr_num].emacaddrhigh.address_enable = 1;
+    mac_regs->emacaddr[addr_num].emacaddrlow = (mac_addr[3] << 24) | (mac_addr[2] << 16) | (mac_addr[1] << 8) | (mac_addr[0]);
+}
+
+static inline bool emac_ll_get_addr_filter(emac_mac_dev_t *mac_regs, uint8_t addr_num, uint8_t *mac_addr, uint8_t *mask, bool *filter_for_source)
+{
+    addr_num = addr_num - 1; // MAC Address1 is located at emacaddr[0]
+    if (mac_regs->emacaddr[addr_num].emacaddrhigh.address_enable) {
+        if (mac_addr != NULL) {
+            *(&mac_addr[0]) = mac_regs->emacaddr[addr_num].emacaddrlow & 0xFF;
+            *(&mac_addr[1]) = (mac_regs->emacaddr[addr_num].emacaddrlow >> 8) & 0xFF;
+            *(&mac_addr[2]) = (mac_regs->emacaddr[addr_num].emacaddrlow >> 16) & 0xFF;
+            *(&mac_addr[3]) = (mac_regs->emacaddr[addr_num].emacaddrlow >> 24) & 0xFF;
+            *(&mac_addr[4]) = mac_regs->emacaddr[addr_num].emacaddrhigh.mac_address_hi & 0xFF;
+            *(&mac_addr[5]) = (mac_regs->emacaddr[addr_num].emacaddrhigh.mac_address_hi >> 8) & 0xFF;
+        }
+        if (mask != NULL) {
+            *mask = mac_regs->emacaddr[addr_num].emacaddrhigh.mask_byte_control;
+        }
+        if (filter_for_source != NULL) {
+            *filter_for_source = mac_regs->emacaddr[addr_num].emacaddrhigh.source_address;
+        }
+        return true;
+    }
+    return false;
+}
+
+static inline void emac_ll_rm_addr_filter(emac_mac_dev_t *mac_regs, uint8_t addr_num)
+{
+    addr_num = addr_num - 1; // MAC Address1 is located at emacaddr[0]
+    mac_regs->emacaddr[addr_num].emacaddrhigh.address_enable = 0;
+    HAL_FORCE_MODIFY_U32_REG_FIELD(mac_regs->emacaddr[addr_num].emacaddrhigh, mac_address_hi, 0);
+    mac_regs->emacaddr[addr_num].emacaddrlow = 0;
+}
+
 /*************** End of mac regs operation *********************/
-
-
 
 /************** Start of dma regs operation ********************/
 /* dmabusmode */
@@ -397,6 +477,11 @@ static inline void emac_ll_recv_store_forward_enable(emac_dma_dev_t *dma_regs, b
     dma_regs->dmaoperation_mode.rx_store_forward = enable;
 }
 
+static inline bool emac_ll_recv_store_forward_is_enabled(emac_dma_dev_t *dma_regs)
+{
+    return dma_regs->dmaoperation_mode.rx_store_forward;
+}
+
 static inline void emac_ll_flush_recv_frame_enable(emac_dma_dev_t *dma_regs, bool enable)
 {
     dma_regs->dmaoperation_mode.dis_flush_recv_frames = !enable;
@@ -410,6 +495,11 @@ static inline void emac_ll_trans_store_forward_enable(emac_dma_dev_t *dma_regs, 
 static inline void emac_ll_flush_trans_fifo_enable(emac_dma_dev_t *dma_regs, bool enable)
 {
     dma_regs->dmaoperation_mode.flush_tx_fifo = enable;
+}
+
+static inline bool emac_ll_get_flush_trans_fifo(emac_dma_dev_t *dma_regs)
+{
+    return dma_regs->dmaoperation_mode.flush_tx_fifo;
 }
 
 static inline void emac_ll_set_transmit_threshold(emac_dma_dev_t *dma_regs, uint32_t threshold)
@@ -468,9 +558,14 @@ static inline void emac_ll_set_rx_dma_pbl(emac_dma_dev_t *dma_regs, uint32_t pbl
     dma_regs->dmabusmode.rx_dma_pbl = pbl;
 }
 
-static inline void emac_ll_set_prog_burst_len(emac_dma_dev_t *dma_regs, uint32_t len)
+static inline void emac_ll_set_prog_burst_len(emac_dma_dev_t *dma_regs, eth_mac_dma_burst_len_t dma_burst_len)
 {
-    dma_regs->dmabusmode.prog_burst_len = len;
+    dma_regs->dmabusmode.prog_burst_len =   dma_burst_len == ETH_DMA_BURST_LEN_1 ? EMAC_LL_DMA_BURST_LENGTH_1BEAT :
+                                            dma_burst_len == ETH_DMA_BURST_LEN_2 ? EMAC_LL_DMA_BURST_LENGTH_2BEAT :
+                                            dma_burst_len == ETH_DMA_BURST_LEN_4 ? EMAC_LL_DMA_BURST_LENGTH_4BEAT :
+                                            dma_burst_len == ETH_DMA_BURST_LEN_8 ? EMAC_LL_DMA_BURST_LENGTH_8BEAT :
+                                            dma_burst_len == ETH_DMA_BURST_LEN_16 ? EMAC_LL_DMA_BURST_LENGTH_16BEAT :
+                                            EMAC_LL_DMA_BURST_LENGTH_32BEAT;
 }
 
 static inline void emac_ll_enhance_desc_enable(emac_dma_dev_t *dma_regs, bool enable)
@@ -506,12 +601,17 @@ static inline void emac_ll_disable_all_intr(emac_dma_dev_t *dma_regs)
 
 static inline void emac_ll_enable_corresponding_intr(emac_dma_dev_t *dma_regs, uint32_t mask)
 {
-    dma_regs->dmain_en.val |= mask;
+    uint32_t temp_mask = dma_regs->dmain_en.val;
+    temp_mask |= mask;
+    dma_regs->dmain_en.val = temp_mask;
+
 }
 
 static inline void emac_ll_disable_corresponding_intr(emac_dma_dev_t *dma_regs, uint32_t mask)
 {
-    dma_regs->dmain_en.val &= ~mask;
+    uint32_t temp_mask = dma_regs->dmain_en.val;
+    temp_mask &= ~mask;
+    dma_regs->dmain_en.val = temp_mask;
 }
 
 static inline uint32_t emac_ll_get_intr_enable_status(emac_dma_dev_t *dma_regs)
@@ -535,7 +635,6 @@ __attribute__((always_inline)) static inline void emac_ll_clear_all_pending_intr
     dma_regs->dmastatus.val = 0xFFFFFFFF;
 }
 
-
 /* dmatxpolldemand / dmarxpolldemand */
 static inline void emac_ll_transmit_poll_demand(emac_dma_dev_t *dma_regs, uint32_t val)
 {
@@ -548,9 +647,16 @@ static inline void emac_ll_receive_poll_demand(emac_dma_dev_t *dma_regs, uint32_
 
 /*************** End of dma regs operation *********************/
 
-
-
 /************** Start of ext regs operation ********************/
+
+static inline eth_data_interface_t emac_ll_get_phy_intf(emac_ext_dev_t *ext_regs)
+{
+    if (ext_regs->ex_phyinf_conf.phy_intf_sel == 4) {
+        return EMAC_DATA_INTERFACE_RMII;
+    }
+    return EMAC_DATA_INTERFACE_MII;
+}
+
 static inline void emac_ll_clock_enable_mii(emac_ext_dev_t *ext_regs)
 {
     /* 0 for mii mode */
@@ -583,12 +689,17 @@ static inline void emac_ll_clock_enable_rmii_output(emac_ext_dev_t *ext_regs)
     ext_regs->ex_clkout_conf.h_div_num = 0;
 }
 
-
 static inline void emac_ll_pause_frame_enable(emac_ext_dev_t *ext_regs, bool enable)
 {
     ext_regs->ex_phyinf_conf.sbd_flowctrl = enable;
 }
 /*************** End of ext regs operation *********************/
+
+static inline soc_module_clk_t emac_ll_get_csr_clk_src(void)
+{
+    // Source of the ESP32 EMAC CRS clock is APB clock.
+    return SOC_MOD_CLK_APB;
+}
 
 #ifdef __cplusplus
 }

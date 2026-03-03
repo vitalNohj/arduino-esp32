@@ -1,16 +1,8 @@
-// Copyright 2015-2018 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #ifndef _ESP_TRANSPORT_SSL_H_
 #define _ESP_TRANSPORT_SSL_H_
@@ -53,7 +45,7 @@ void esp_transport_ssl_set_cert_data(esp_transport_handle_t t, const char *data,
 void esp_transport_ssl_set_cert_data_der(esp_transport_handle_t t, const char *data, int len);
 
 /**
- * @brief      Enable the use of certification bundle for server verfication for
+ * @brief      Enable the use of certification bundle for server verification for
  *             an SSL connection.
  *             It must be first enabled in menuconfig.
  *
@@ -69,6 +61,23 @@ void esp_transport_ssl_crt_bundle_attach(esp_transport_handle_t t, esp_err_t ((*
  */
 void esp_transport_ssl_enable_global_ca_store(esp_transport_handle_t t);
 
+#if CONFIG_MBEDTLS_DYNAMIC_BUFFER
+/**
+ * @brief      Set ESP-TLS dynamic buffer strategy for ESP-TLS connection
+ *
+ * @param      t    ssl transport
+ * @param[in]  strategy      ESP-TLS dynamic buffer strategy
+ */
+void esp_transport_ssl_set_esp_tls_dyn_buf_strategy(esp_transport_handle_t t, esp_tls_dyn_buf_strategy_t strategy);
+#endif
+/**
+ * @brief      Set TLS protocol version for ESP-TLS connection
+ *
+ * @param      t    ssl transport
+ * @param[in]  tls_version      TLS version
+ */
+void esp_transport_ssl_set_tls_version(esp_transport_handle_t t, esp_tls_proto_ver_t tls_version);
+
 /**
  * @brief      Set SSL client certificate data for mutual authentication (as PEM format).
  *             Note that, this function stores the pointer to data, rather than making a copy.
@@ -79,6 +88,36 @@ void esp_transport_ssl_enable_global_ca_store(esp_transport_handle_t t);
  * @param[in]  len   The length
  */
 void esp_transport_ssl_set_client_cert_data(esp_transport_handle_t t, const char *data, int len);
+
+#ifdef CONFIG_MBEDTLS_HARDWARE_ECDSA_SIGN
+/**
+ * @brief      Set SSL client key data for mutual authentication when using ECDSA peripheral.
+ *
+ * @param      t            ssl transport
+ * @param[in]  ecdsa_efuse_blk. The efuse block where ECDSA key is stored.
+ */
+void esp_transport_ssl_set_client_key_ecdsa_peripheral(esp_transport_handle_t t, uint8_t ecdsa_efuse_blk);
+
+#if SOC_ECDSA_SUPPORT_CURVE_P384
+/**
+ * @brief      Set SSL client key data for mutual authentication when using ECDSA peripheral with extended key storage.
+ *             This function is used when the ECDSA key requires multiple efuse blocks for storage (e.g., P-384 curve).
+ *
+ * @param      t                    ssl transport
+ * @param[in]  ecdsa_efuse_blk      The efuse block where the lower part of ECDSA key is stored
+ * @param[in]  ecdsa_efuse_blk_high The efuse block where the upper part of ECDSA key is stored (required for P-384 and larger curves)
+ */
+void esp_transport_ssl_set_client_key_ecdsa_peripheral_extended(esp_transport_handle_t t, uint8_t ecdsa_efuse_blk, uint8_t ecdsa_efuse_blk_high);
+#endif
+
+/**
+ * @brief      Set ECDSA curve for SSL client when using ECDSA peripheral.
+ *
+ * @param      t            ssl transport
+ * @param[in]  curve        ECDSA curve to use
+ */
+void esp_transport_ssl_set_ecdsa_curve(esp_transport_handle_t t, esp_tls_ecdsa_curve_t curve);
+#endif
 
 /**
  * @brief      Set SSL client certificate data for mutual authentication (as DER format).
@@ -143,9 +182,34 @@ void esp_transport_ssl_set_alpn_protocol(esp_transport_handle_t t, const char **
 void esp_transport_ssl_skip_common_name_check(esp_transport_handle_t t);
 
 /**
+ * @brief      Set the server certificate's common name field
+ *
+ * @note
+ *             If non-NULL, server certificate CN must match this name,
+ *             If NULL, server certificate CN must match hostname.
+ * @param      t             ssl transport
+ *             common_name   A string containing the common name to be set
+ */
+void esp_transport_ssl_set_common_name(esp_transport_handle_t t, const char *common_name);
+
+
+/**
+ * @brief      Set the SSL cipher suites list
+ *
+ * @note       This function stores a pointer to the data rather than making a copy.
+ *             Therefore, the data must remain valid until the connection is cleaned up.
+ *             The `ciphersuites_list` is a pointer to a zero-terminated array of IANA identifiers of TLS cipher suites.
+ *             You can verify the validity of the list using the `esp_tls_get_ciphersuites_list()` API.
+ *
+ * @param      t                  SSL transport
+ * @param[in]  ciphersuites_list  A pointer to a zero-terminated array of IANA identifiers of TLS cipher suites
+ */
+void esp_transport_ssl_set_ciphersuites_list(esp_transport_handle_t t, const int *ciphersuites_list);
+
+/**
  * @brief      Set the ssl context to use secure element (atecc608a) for client(device) private key and certificate
  *
- * @note       Recommended to be used with ESP32-WROOM-32SE (which has inbuilt ATECC608A a.k.a Secure Element)
+ * @note       Recommended to be used with ESP32 series interfaced to ATECC608A based secure element
  *
  * @param      t     ssl transport
  */
@@ -189,6 +253,36 @@ void esp_transport_ssl_set_keep_alive(esp_transport_handle_t t, esp_transport_ke
  * @param[in]  if_name  The interface name
  */
 void esp_transport_ssl_set_interface_name(esp_transport_handle_t t, struct ifreq *if_name);
+
+/**
+ * @brief      Set addr family of transport
+ *
+ * @param[in]  t            The transport handle
+ * @param[in]  addr_family  The addr family
+ */
+void esp_transport_ssl_set_addr_family(esp_transport_handle_t t, esp_tls_addr_family_t addr_family);
+
+#ifdef CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS
+/**
+ * @brief   Session ticket operation
+ */
+typedef enum {
+    ESP_TRANSPORT_SESSION_TICKET_INIT,      /*!< Allocate and initialize a TLS session */
+    ESP_TRANSPORT_SESSION_TICKET_SAVE,      /*!< Save TLS session so it can be restored for the next handshake */
+    ESP_TRANSPORT_SESSION_TICKET_USE,       /*!< Use already saved session to reconnect faster */
+    ESP_TRANSPORT_SESSION_TICKET_FREE       /*!< Deallocate and deinit the TLS session */
+} esp_transport_session_ticket_operation_t;
+
+/**
+ * @brief      Perform desired session ticket operation (init, save, use)
+ *
+ * @param[in]  t            The transport handle
+ * @param[in]  operation    Operation to perform with TLS session
+ *
+ * @note This operation is only available if CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS=y
+ */
+esp_err_t esp_transport_ssl_session_ticket_operation(esp_transport_handle_t t, esp_transport_session_ticket_operation_t operation);
+#endif // CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS
 
 #ifdef __cplusplus
 }

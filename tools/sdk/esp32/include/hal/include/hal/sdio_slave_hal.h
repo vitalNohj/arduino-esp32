@@ -1,16 +1,8 @@
-// Copyright 2015-2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*******************************************************************************
  * NOTICE
@@ -149,11 +141,19 @@ The HAL is used as below:
 
 #pragma once
 #include <esp_err.h>
-#include "soc/lldesc.h"
+#include <stdbool.h>
+#include "soc/soc_caps.h"
+#if SOC_SDIO_SLAVE_SUPPORTED
 #include "hal/sdio_slave_types.h"
 #include "hal/sdio_slave_ll.h"
+#endif
 
-/// Space used for each sending descriptor. Should initialize the sendbuf accoring to this size.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if SOC_SDIO_SLAVE_SUPPORTED
+/// Space used for each sending descriptor. Should initialize the sendbuf according to this size.
 #define SDIO_SLAVE_SEND_DESC_SIZE   sizeof(sdio_slave_hal_send_desc_t)
 
 
@@ -180,15 +180,15 @@ typedef struct {
 
 /// DMA descriptor with extra fields
 typedef struct sdio_slave_hal_send_desc_s {
-    lldesc_t dma_desc;    ///< Used by Hardware, has pointer linking to next desc
+    sdio_slave_ll_desc_t dma_desc;    ///< Used by Hardware, has pointer linking to next desc
     uint32_t pkt_len;     ///< Accumulated length till this descriptor
     void*   arg;          ///< Holding arguments indicating this buffer */
 } sdio_slave_hal_send_desc_t;
 
 /// Descriptor used by the receiving part, call `sdio_slave_hal_recv_init_desc`
 /// to initialize it before use.
-typedef lldesc_t sdio_slave_hal_recv_desc_t;
-#define sdio_slave_hal_recv_desc_s lldesc_s
+typedef sdio_slave_ll_desc_t sdio_slave_hal_recv_desc_t;
+#define sdio_slave_hal_recv_desc_s sdio_slave_ll_desc_s
 typedef STAILQ_HEAD(recv_stailq_head_s, sdio_slave_hal_recv_desc_s) sdio_slave_hal_recv_stailq_t;
 
 
@@ -210,6 +210,10 @@ typedef struct {
                                              * configured before using the HAL. `SDIO_SLAVE_TIMING_PSEND_PSAMPLE` is
                                              * recommended by default.
                                              */
+    //some boolean flags
+    struct {
+        uint32_t no_highspeed: 1;           /**< Disable the highspeed support */
+    };
     int                 send_queue_size;    /**< Max buffers that can be queued before sending. Should be manually
                                              * configured before using the HAL.
                                              */
@@ -220,6 +224,7 @@ typedef struct {
     sdio_ringbuf_t      send_desc_queue;            /**< The ring buffer used to hold queued descriptors. Should be manually
                                              * initialized before using the HAL.
                                              */
+
     //Internal status, no need to touch.
     send_state_t        send_state;         // Current state of sending part.
     uint32_t            tail_pkt_len;       // The accumulated send length of the tail packet.
@@ -234,7 +239,7 @@ typedef struct {
 
 /**
  * Initialize the HAL, should provide buffers to the context and configure the
- * members before this funciton is called.
+ * members before this function is called.
  *
  * @param hal Context of the HAL layer.
  */
@@ -345,7 +350,7 @@ esp_err_t sdio_slave_hal_send_get_next_finished_arg(sdio_slave_context_t *hal, v
  *
  * @note Only call when the DMA is stopped!
  * @param hal Context of the HAL layer.
- * @param out_arg Argument indiciating the buffer to send
+ * @param out_arg Argument indicating the buffer to send
  * @param out_return_cnt Space in the queue released after this descriptor is flushed.
  * @return
  *  - ESP_ERR_INVALID_STATE: This function call be called only when the DMA is stopped.
@@ -471,7 +476,7 @@ void sdio_slave_hal_recv_flush_one_buffer(sdio_slave_context_t *hal);
 /**
  * Enable some of the interrupts for the host.
  *
- * @note May have concurrency issue wit the host or other tasks, suggest only use it during
+ * @note May have concurrency issue with the host or other tasks, suggest only use it during
  *       initialization.
  * @param hal Context of the HAL layer.
  * @param mask Bitwise mask for the interrupts to enable.
@@ -526,3 +531,17 @@ uint8_t sdio_slave_hal_host_get_reg(sdio_slave_context_t *hal, int pos);
  * @param reg Value to set.
  */
 void sdio_slave_hal_host_set_reg(sdio_slave_context_t *hal, int pos, uint8_t reg);
+
+/**
+ * Get the address of the interrupt status register.
+ *
+ * @param hal Context of the HAL layer.
+ * @return Address of the interrupt status register
+ */
+volatile void* sdio_slave_hal_get_intr_status_reg(sdio_slave_context_t *hal);
+
+#endif  // SOC_SDIO_SLAVE_SUPPORTED
+
+#ifdef __cplusplus
+}
+#endif

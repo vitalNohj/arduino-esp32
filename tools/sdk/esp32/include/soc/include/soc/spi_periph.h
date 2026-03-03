@@ -1,26 +1,23 @@
-// Copyright 2015-2018 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2024 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #pragma once
+
 #include <stdint.h>
 #include "sdkconfig.h"
 #include "soc/soc.h"
-#include "soc/periph_defs.h"
+#include "soc/soc_caps.h"
+#include "soc/spi_pins.h"
+#if SOC_PAU_SUPPORTED
+#include "soc/regdma.h"
+#include "soc/retention_periph_defs.h"
+#endif
 
 //include soc related (generated) definitions
-#include "soc/soc_caps.h"
-#include "soc/soc_pins.h"
+#include "soc/interrupts.h"
 #include "soc/spi_reg.h"
 #include "soc/spi_struct.h"
 #include "soc/gpio_sig_map.h"
@@ -66,7 +63,7 @@ typedef struct {
     const uint8_t spid6_in;
     const uint8_t spid7_in;
 #endif // SOC_SPI_SUPPORT_OCT
-    const uint8_t spics_out[3];     // /CS GPIO output mux signals
+    const uint8_t spics_out[SOC_SPI_MAX_CS_NUM];     // /CS GPIO output mux signals
     const uint8_t spics_in;
     const uint8_t spidqs_out;
     const uint8_t spicd_out;
@@ -78,12 +75,21 @@ typedef struct {
     const uint8_t spics0_iomux_pin;
     const uint8_t irq;              //irq source for interrupt mux
     const uint8_t irq_dma;          //dma irq source for interrupt mux
-    const periph_module_t module;   //peripheral module, for enabling clock etc
-    const int func;             //function number for IOMUX
-    spi_dev_t *hw;              //Pointer to the hardware registers
+    const int func;                 //function number for IOMUX
+    spi_dev_t *hw;                  //Pointer to the hardware registers
 } spi_signal_conn_t;
 
 extern const spi_signal_conn_t spi_periph_signal[SOC_SPI_PERIPH_NUM];
+
+#if SOC_PAU_SUPPORTED
+typedef struct {
+    const periph_retention_module_t module_id;
+    const regdma_entries_config_t *entry_array;
+    uint32_t array_size;
+} spi_reg_retention_info_t;
+
+extern const spi_reg_retention_info_t spi_reg_retention_info[SOC_SPI_PERIPH_NUM - 1];   // -1 to except mspi
+#endif  // SOC_PAU_SUPPORTED
 
 #ifdef __cplusplus
 }

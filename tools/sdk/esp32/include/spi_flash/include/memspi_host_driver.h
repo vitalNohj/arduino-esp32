@@ -1,16 +1,8 @@
-// Copyright 2015-2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #pragma once
 #include "hal/spi_flash_hal.h"
@@ -55,6 +47,17 @@ typedef spi_flash_hal_context_t memspi_host_inst_t;
  * @return always return ESP_OK
  */
 esp_err_t memspi_host_init_pointers(memspi_host_inst_t *host, const memspi_host_config_t *cfg);
+
+/**
+ * Initialize the memory SPI host for ESP32-C5 dynamic configuration.
+ *
+ * @param host Pointer to the host structure.
+ *
+ * @note This function is available only when CONFIG_SPI_FLASH_FREQ_LIMIT_C5_240MHZ is defined.
+ * @note This function can only be called once at startup, after memspi_host_init_pointers() is called.
+ * @return always return ESP_OK
+ */
+esp_err_t memspi_host_init_c5_dynamic_config(memspi_host_inst_t *host);
 
 /*******************************************************************************
  * NOTICE
@@ -169,7 +172,7 @@ int memspi_host_read_data_slicer(spi_flash_host_inst_t *host, uint32_t address, 
 
 /**
  * @brief Slicer for write data used in non-encrypted regions. This slicer limit the length to the
- *        maximum size the host supports, and truncate if the write data lie accross the page boundary
+ *        maximum size the host supports, and truncate if the write data lie across the page boundary
  *        (256 bytes)
  *
  * @param address Flash address to write

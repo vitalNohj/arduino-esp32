@@ -1,23 +1,13 @@
-// Copyright 2021 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2021-2024 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #pragma once
 
-/**
- * @brief Ethernet frame CRC length
- *
- */
-#define ETH_CRC_LEN (4)
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
 * @brief Ethernet interface
@@ -63,3 +53,37 @@ typedef enum {
     ETH_CHECKSUM_SW, /*!< Ethernet checksum calculate by software */
     ETH_CHECKSUM_HW  /*!< Ethernet checksum calculate by hardware */
 } eth_checksum_t;
+
+/**
+* @brief Internal ethernet EMAC's DMA available burst sizes
+*/
+typedef enum {
+    ETH_DMA_BURST_LEN_32,
+    ETH_DMA_BURST_LEN_16,
+    ETH_DMA_BURST_LEN_8,
+    ETH_DMA_BURST_LEN_4,
+    ETH_DMA_BURST_LEN_2,
+    ETH_DMA_BURST_LEN_1,
+} eth_mac_dma_burst_len_t;
+
+/**
+ * @brief EMAC System timestamp update update method
+ *
+ */
+typedef enum {
+    ETH_PTP_UPDATE_METHOD_COARSE,   /*!< EMAC System timestamp update using the Coarse method */
+    ETH_PTP_UPDATE_METHOD_FINE      /*!< EMAC System timestamp update using the Fine method */
+} eth_mac_ptp_update_method_t;
+
+/**
+ * @brief EMAC System Timestamp Rollover
+ *
+ */
+typedef enum {
+    ETH_PTP_DIGITAL_ROLLOVER,       /*!< Digital - subseconds register rolls over after 999999999 value (1 nanosecond accuracy) */
+    ETH_PTP_BINARY_ROLLOVER         /*!< Binary - subseconds register rolls over after 0x7FFFFFFF value  */
+} eth_mac_ptp_roll_type_t;
+
+#ifdef __cplusplus
+}
+#endif

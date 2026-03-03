@@ -1,16 +1,8 @@
-// Copyright 2015-2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*******************************************************************************
  * NOTICE
@@ -29,6 +21,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief Load the mode for the SHA engine
+ *
+ * @param sha_type The SHA algorithm type
+ */
+void sha_hal_set_mode(esp_sha_type sha_type);
 
 /**
  * @brief Hashes a single message block
@@ -68,11 +67,10 @@ void sha_hal_write_digest(esp_sha_type sha_type, void *digest_state);
 /**
  * @brief Hashes a number of message blocks using DMA
  *
- * @param sha_type      SHA algorithm to hash with
  * @param num_blocks    Number of blocks to hash
  * @param first_block   Is this the first block in a message or a continuation?
  */
-void sha_hal_hash_dma(esp_sha_type sha_type, size_t num_blocks, bool first_block);
+void sha_hal_hash_dma(size_t num_blocks, bool first_block);
 #endif
 
 #if SOC_SHA_SUPPORT_SHA512_T

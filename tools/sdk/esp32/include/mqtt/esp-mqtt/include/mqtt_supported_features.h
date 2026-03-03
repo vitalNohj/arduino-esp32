@@ -64,5 +64,16 @@
 #define MQTT_SUPPORTED_FEATURE_CERTIFICATE_BUNDLE
 #endif
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+// Features supported in 5.1.0
+#define MQTT_SUPPORTED_FEATURE_CRT_CMN_NAME
+#endif
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+// Features supported in 5.2.0
+#define MQTT_SUPPORTED_FEATURE_ECDSA_PERIPHERAL
+#endif
+
+
 #endif /* ESP_IDF_VERSION */
 #endif // _MQTT_SUPPORTED_FEATURES_H_

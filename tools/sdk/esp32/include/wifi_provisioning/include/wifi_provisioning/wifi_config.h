@@ -1,21 +1,14 @@
-// Copyright 2018 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2018-2024 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #ifndef _WIFI_PROV_CONFIG_H_
 #define _WIFI_PROV_CONFIG_H_
 
-#include <lwip/inet.h>
+#include "esp_netif_ip_addr.h"
+#include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,7 +20,8 @@ extern "C" {
 typedef enum {
     WIFI_PROV_STA_CONNECTING,
     WIFI_PROV_STA_CONNECTED,
-    WIFI_PROV_STA_DISCONNECTED
+    WIFI_PROV_STA_DISCONNECTED,
+    WIFI_PROV_STA_CONN_ATTEMPT_FAILED
 } wifi_prov_sta_state_t;
 
 /**
@@ -54,6 +48,13 @@ typedef struct {
 } wifi_prov_sta_conn_info_t;
 
 /**
+ * @brief   WiFi STA connecting status information
+ */
+typedef struct {
+    uint32_t attempts_remaining; /*!< Number of Wi-Fi connection attempts remaining */
+} wifi_prov_sta_connecting_info_t;
+
+/**
  * @brief   WiFi status data to be sent in response to `get_status` request from master
  */
 typedef struct {
@@ -68,6 +69,11 @@ typedef struct {
          * Connection information (valid only when `wifi_state` is `WIFI_STATION_CONNECTED`)
          */
         wifi_prov_sta_conn_info_t   conn_info;
+
+        /**
+         * Connecting information (valid only when `wifi_state` is `WIFI_STATION_CONNECTING`)
+         */
+        wifi_prov_sta_connecting_info_t connecting_info;
     };
 } wifi_prov_config_get_data_t;
 

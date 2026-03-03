@@ -1,39 +1,16 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-#ifndef __ESP_NEWLIB_H__
-#define __ESP_NEWLIB_H__
+/*
+ * SPDX-FileCopyrightText: 2015-2024 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+/* TODO IDF-11226 rename this file to esp_libc.h */
+#pragma once
 
 #include <sys/reent.h>
 
-/*
- * Initialize newlib time functions
- */
-void esp_newlib_time_init(void);
-
-/**
- * Replacement for newlib's _REENT_INIT_PTR and __sinit.
- *
- * Called from startup code and FreeRTOS, not intended to be called from
- * application code.
- */
-void esp_reent_init(struct _reent* r);
-
-/**
- * Clean up some of lazily allocated buffers in REENT structures.
- */
-void esp_reent_cleanup(void);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Function which sets up newlib in ROM for use with ESP-IDF
@@ -43,9 +20,41 @@ void esp_reent_cleanup(void);
  * Called from the startup code, not intended to be called from application
  * code.
  */
-void esp_newlib_init(void);
+void esp_libc_init(void);
 
-void esp_setup_syscall_table(void) __attribute__((deprecated("Please call esp_newlib_init() in newer code")));
+void esp_setup_syscall_table(void) __attribute__((deprecated("Please call esp_libc_init() in newer code")));
+
+/**
+ * Postponed _GLOBAL_REENT stdio FPs initialization.
+ *
+ * Can not be a part of esp_reent_init() because stdio device may not initialized yet.
+ *
+ * Called from startup code and FreeRTOS, not intended to be called from
+ * application code.
+ *
+ */
+#if CONFIG_VFS_SUPPORT_IO
+void esp_libc_init_global_stdio(const char *stdio_dev);
+#else
+void esp_libc_init_global_stdio(void);
+#endif
+
+void esp_libc_time_init(void);
+
+#if CONFIG_LIBC_NEWLIB
+/**
+ * Replacement for newlib's _REENT_INIT_PTR and __sinit.
+ *
+ * Called from startup code and FreeRTOS, not intended to be called from
+ * application code.
+ */
+void esp_reent_init(struct _reent* r);
+#endif
+
+/**
+ * Clean up some of lazily allocated buffers in REENT structures.
+ */
+void esp_reent_cleanup(void);
 
 /**
  * Update current microsecond time from RTC
@@ -53,13 +62,23 @@ void esp_setup_syscall_table(void) __attribute__((deprecated("Please call esp_ne
 void esp_set_time_from_rtc(void);
 
 /*
- * Sync counters RTC and FRC. Update boot_time.
+ * Sync timekeeping timers, RTC and high-resolution timer. Update boot_time.
  */
-void esp_sync_counters_rtc_and_frc(void);
+void esp_sync_timekeeping_timers(void);
+
+/* Kept for backward compatibility */
+#define esp_sync_counters_rtc_and_frc esp_sync_timekeeping_timers
 
 /**
- * Initialize newlib static locks
+ * Initialize libc static locks
  */
-void esp_newlib_locks_init(void);
+void esp_libc_locks_init(void);
 
-#endif //__ESP_NEWLIB_H__
+/* TODO IDF-11226 */
+void esp_newlib_time_init(void) __attribute__((deprecated("Please use esp_libc_time_init instead")));
+void esp_newlib_init(void) __attribute__((deprecated("Please use esp_libc_init instead")));
+void esp_newlib_locks_init(void) __attribute__((deprecated("Please use esp_libc_locks_init instead")));
+
+#ifdef __cplusplus
+}
+#endif

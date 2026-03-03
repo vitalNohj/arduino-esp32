@@ -1,31 +1,27 @@
-// Copyright 2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #pragma once
 
+#include <stdint.h>
 #include "soc/soc_caps.h"
-#include "soc/mcpwm_reg.h"
-#include "soc/mcpwm_struct.h"
 #include "soc/periph_defs.h"
+#include "soc/regdma.h"
+#if SOC_MCPWM_SUPPORT_SLEEP_RETENTION
+#include "soc/retention_periph_defs.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#if SOC_MCPWM_SUPPORTED
 typedef struct {
     struct {
-        const periph_module_t module; // Peripheral module
+        const char *module_name;
         const int irq_id;
         struct {
             struct {
@@ -45,6 +41,18 @@ typedef struct {
 } mcpwm_signal_conn_t;
 
 extern const mcpwm_signal_conn_t mcpwm_periph_signals;
+
+#if SOC_MCPWM_SUPPORT_SLEEP_RETENTION
+typedef struct {
+    const regdma_entries_config_t *regdma_entry_array;
+    uint32_t array_size;
+    const periph_retention_module_t retention_module;
+} mcpwm_reg_retention_info_t;
+
+extern const mcpwm_reg_retention_info_t mcpwm_reg_retention_info[SOC_MCPWM_GROUPS];
+#endif // SOC_MCPWM_SUPPORT_SLEEP_RETENTION
+
+#endif // SOC_MCPWM_SUPPORTED
 
 #ifdef __cplusplus
 }

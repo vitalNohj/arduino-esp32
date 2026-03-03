@@ -1,16 +1,8 @@
-// Copyright 2015-2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #pragma once
 #include "esp_flash.h"
@@ -39,7 +31,6 @@ typedef enum {
    SPI_FLASH_CHIP_CAP_32MB_SUPPORT = BIT(1),       ///< Flash chip driver support flash size larger than 32M Bytes.
    SPI_FLASH_CHIP_CAP_UNIQUE_ID = BIT(2),          ///< Flash chip driver support read the flash unique id.
 } spi_flash_caps_t;
-FLAG_ATTR(spi_flash_caps_t)
 
 /** @brief SPI flash chip driver definition structure.
  *
@@ -221,3 +212,15 @@ struct spi_flash_chip_t {
    This pointer can be overwritten with a pointer to a new array, to update the list of known flash chips.
  */
 extern const spi_flash_chip_t **esp_flash_registered_chips;
+
+/**
+* @brief Helper function to check if a specific flash chip driver is linked.
+ *
+ * Logs a warning if the driver for the detected chip is not linked.
+ *
+ * @param chip       Pointer to an `esp_flash_t` structure representing the flash chip instance.
+ *                   This structure typically contains information about the chip's characteristics and state.
+ * @param device_id  A 24-bit value representing the unique identifier (ID) of the flash chip.
+ *                   This ID is used to match the chip against known drivers.
+ */
+void spi_flash_chip_list_check(esp_flash_t *chip, uint32_t device_id);

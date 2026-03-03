@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2017-2021 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2017-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,19 +13,7 @@
 #include "esp_log.h"
 #include "soc/soc_caps.h"
 #include "sdkconfig.h"
-#include_next "esp_efuse.h"
-
-#if CONFIG_IDF_TARGET_ESP32
-#include "esp32/rom/secure_boot.h"
-#elif CONFIG_IDF_TARGET_ESP32S2
-#include "esp32s2/rom/secure_boot.h"
-#elif CONFIG_IDF_TARGET_ESP32C3
-#include "esp32c3/rom/secure_boot.h"
-#elif CONFIG_IDF_TARGET_ESP32S3
-#include "esp32s3/rom/secure_boot.h"
-#elif CONFIG_IDF_TARGET_ESP32H2
-#include "esp32h2/rom/secure_boot.h"
-#endif
+#include "esp_efuse_chip.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,6 +45,17 @@ typedef enum {
     ESP_EFUSE_ROM_LOG_ON_GPIO_HIGH, /**< ROM logging is enabled when specific GPIO level is high during start up */
     ESP_EFUSE_ROM_LOG_ALWAYS_OFF    /**< Disable ROM logging permanently */
 } esp_efuse_rom_log_scheme_t;
+
+#if CONFIG_ESP32_REV_MIN_FULL >= 300 || !CONFIG_IDF_TARGET_ESP32
+/**
+ * @brief Pointers to the trusted key digests.
+ *
+ * The number of digests depends on the SOC's capabilities.
+ */
+typedef struct {
+    const void *key_digests[SOC_EFUSE_SECURE_BOOT_KEY_DIGESTS]; /**< Pointers to the key digests */
+} esp_secure_boot_key_digests_t;
+#endif
 
 /**
  * @brief   Reads bits from EFUSE field and writes it into an array.
@@ -160,7 +159,7 @@ esp_err_t esp_efuse_write_field_cnt(const esp_efuse_desc_t* field[], size_t cnt)
  *
  * @return
  * - ESP_OK: The operation was successfully completed, or the bit was already set to value 1.
- * - ESP_ERR_INVALID_ARG: Error in the passed arugments, including if the efuse field is not 1 bit wide.
+ * - ESP_ERR_INVALID_ARG: Error in the passed arguments, including if the efuse field is not 1 bit wide.
  */
 esp_err_t esp_efuse_write_field_bit(const esp_efuse_desc_t* field[]);
 
@@ -236,7 +235,7 @@ esp_err_t esp_efuse_write_reg(esp_efuse_block_t blk, unsigned int num_reg, uint3
 /**
  * @brief   Return efuse coding scheme for blocks.
  *
- * Note: The coding scheme is applicable only to 1, 2 and 3 blocks. For 0 block, the coding scheme is always ``NONE``.
+ * @note The coding scheme is applicable only to 1, 2 and 3 blocks. For 0 block, the coding scheme is always ``NONE``.
  *
  * @param[in]  blk     Block number of eFuse.
  * @return Return efuse coding scheme for blocks
@@ -277,19 +276,28 @@ esp_err_t esp_efuse_read_block(esp_efuse_block_t blk, void* dst_key, size_t offs
 esp_err_t esp_efuse_write_block(esp_efuse_block_t blk, const void* src_key, size_t offset_in_bits, size_t size_bits);
 
 /**
- * @brief   Returns chip version from efuse
- *
- * @return chip version
- */
-uint8_t esp_efuse_get_chip_ver(void);
-
-/**
  * @brief   Returns chip package from efuse
  *
  * @return chip package
  */
 uint32_t esp_efuse_get_pkg_ver(void);
 
+#if SOC_RECOVERY_BOOTLOADER_SUPPORTED || __DOXYGEN__
+/**
+ * @brief Sets the recovery bootloader flash offset in eFuse.
+ *
+ * This function is used to set the flash offset in eFuse for the recovery bootloader.
+ * If an offset is already set in eFuse, it will be validated against the provided offset.
+ *
+ * @param offset Flash offset where the recovery bootloader is located.
+ * @return
+ *    - ESP_OK: Successfully set or given offset is already set.
+ *    - ESP_ERR_NOT_ALLOWED: Recovery bootloader feature is disabled in eFuse.
+ *    - ESP_FAIL: Failed to update the recovery bootloader flash offset.
+ *    - Error code from eFuse read/write operations if an error occurs.
+ */
+esp_err_t esp_efuse_set_recovery_bootloader_offset(const uint32_t offset);
+#endif // SOC_RECOVERY_BOOTLOADER_SUPPORTED
 
 /**
  *  @brief Reset efuse write registers
@@ -359,11 +367,12 @@ esp_err_t esp_efuse_set_rom_log_scheme(esp_efuse_rom_log_scheme_t log_scheme);
  *
  * @note If Secure Download mode is already enabled, this function does nothing and returns success.
  *
- * @note Disabling the ROM Download Mode also disables Secure Download Mode.
+ * @note If UART DL mode is completely disabled then Secure Download mode can not be enabled
+ * and this API simply returns success.
  *
  * @return
- * - ESP_OK If the eFuse was successfully burned, or had already been burned.
- * - ESP_ERR_INVALID_STATE ROM Download Mode has been disabled via eFuse, so Secure Download mode is unavailable.
+ * - ESP_OK If the eFuse was successfully burned, or had already been burned, or UART DL mode is already disabled.
+ * - Other errors If an error occurred while burning ESP_EFUSE_ENABLE_SECURITY_DOWNLOAD.
  */
 esp_err_t esp_efuse_enable_rom_secure_download_mode(void);
 #endif
@@ -476,7 +485,7 @@ esp_err_t esp_efuse_batch_write_begin(void);
  *
  * @return
  *          - ESP_OK: Successful.
- *          - ESP_ERR_INVALID_STATE: Tha batch mode was not set.
+ *          - ESP_ERR_INVALID_STATE: The batch mode was not set.
  */
 esp_err_t esp_efuse_batch_write_cancel(void);
 
@@ -597,8 +606,7 @@ bool esp_efuse_get_keypurpose_dis_write(esp_efuse_block_t block);
  */
 esp_efuse_purpose_t esp_efuse_get_key_purpose(esp_efuse_block_t block);
 
-
-#ifndef CONFIG_IDF_TARGET_ESP32
+#if SOC_EFUSE_KEY_PURPOSE_FIELD
 /**
  * @brief Returns a pointer to a key purpose for an efuse key block.
  *
@@ -660,6 +668,9 @@ esp_efuse_block_t esp_efuse_find_unused_key_block(void);
  */
 unsigned esp_efuse_count_unused_key_blocks(void);
 
+#endif // SOC_EFUSE_KEY_PURPOSE_FIELD
+
+#if SOC_SUPPORT_SECURE_BOOT_REVOKE_KEY
 /**
  * @brief Returns the status of the Secure Boot public key digest revocation bit.
  *
@@ -707,12 +718,18 @@ bool esp_efuse_get_write_protect_of_digest_revoke(unsigned num_digest);
  */
 esp_err_t esp_efuse_set_write_protect_of_digest_revoke(unsigned num_digest);
 
-#endif // not CONFIG_IDF_TARGET_ESP32
+#endif // SOC_SUPPORT_SECURE_BOOT_REVOKE_KEY
 
 /**
  * @brief Program a block of key data to an efuse block
  *
  * The burn of a key, protection bits, and a purpose happens in batch mode.
+ *
+ * @note This API also enables the read protection efuse bit for certain key blocks like XTS-AES, HMAC, ECDSA etc.
+ * This ensures that the key is only accessible to hardware peripheral.
+ *
+ * @note For SoC's with capability `SOC_EFUSE_ECDSA_USE_HARDWARE_K` (e.g., ESP32-H2), this API writes an additional
+ * efuse bit for ECDSA key purpose to enforce hardware TRNG generated k mode in the peripheral.
  *
  * @param[in] block Block to read purpose for. Must be in range EFUSE_BLK_KEY0 to EFUSE_BLK_KEY_MAX. Key block must be unused (esp_efuse_key_block_unused).
  * @param[in] purpose Purpose to set for this key. Purpose must be already unset.
@@ -733,6 +750,12 @@ esp_err_t esp_efuse_write_key(esp_efuse_block_t block, esp_efuse_purpose_t purpo
  *
  * The burn of keys, protection bits, and purposes happens in batch mode.
  *
+ * @note This API also enables the read protection efuse bit for certain key blocks like XTS-AES, HMAC, ECDSA etc.
+ * This ensures that the key is only accessible to hardware peripheral.
+ *
+ * @note For SoC's with capability `SOC_EFUSE_ECDSA_USE_HARDWARE_K` (e.g., ESP32-H2), this API writes an additional
+ * efuse bit for ECDSA key purpose to enforce hardware TRNG generated k mode in the peripheral.
+ *
  * @param[in] purposes Array of purposes (purpose[number_of_keys]).
  * @param[in] keys Array of keys (uint8_t keys[number_of_keys][32]). Each key is 32 bytes long.
  * @param[in] number_of_keys The number of keys to write (up to 6 keys).
@@ -748,17 +771,95 @@ esp_err_t esp_efuse_write_key(esp_efuse_block_t block, esp_efuse_purpose_t purpo
 esp_err_t esp_efuse_write_keys(const esp_efuse_purpose_t purposes[], uint8_t keys[][32], unsigned number_of_keys);
 
 
-#if CONFIG_ESP32_REV_MIN_3 || !CONFIG_IDF_TARGET_ESP32
+#if CONFIG_ESP32_REV_MIN_FULL >= 300 || !CONFIG_IDF_TARGET_ESP32
 /**
  * @brief Read key digests from efuse. Any revoked/missing digests will be marked as NULL
  *
- * @param[out] trusted_keys The number of digest in range 0..2
+ * @param[out] trusted_key_digests Trusted keys digests, stored in this parameter after successfully
+ *                                 completing this function.
+ *                                 The number of digests depends on the SOC's capabilities.
  *
  * @return
  *    - ESP_OK: Successful.
  *    - ESP_FAIL: If trusted_keys is NULL or there is no valid digest.
  */
-esp_err_t esp_secure_boot_read_key_digests(ets_secure_boot_key_digests_t *trusted_keys);
+esp_err_t esp_secure_boot_read_key_digests(esp_secure_boot_key_digests_t *trusted_key_digests);
+#endif
+
+/**
+ * @brief   Checks eFuse errors in BLOCK0.
+ *
+ * @note Refers to ESP32-C3 only.
+ *
+ * It does a BLOCK0 check if eFuse EFUSE_ERR_RST_ENABLE is set.
+ * If BLOCK0 has an error, it prints the error and returns ESP_FAIL, which should be treated as esp_restart.
+ *
+ * @return
+ *         - ESP_OK: No errors in BLOCK0.
+ *         - ESP_FAIL: Error in BLOCK0 requiring reboot.
+ */
+esp_err_t esp_efuse_check_errors(void);
+
+/**
+ * @brief   Destroys the data in the given efuse block, if possible.
+ *
+ * Data destruction occurs through the following steps:
+ * 1) Destroy data in the block:
+ *    - If write protection is inactive for the block, then unset bits are burned.
+ *    - If write protection is active, the block remains unaltered.
+ * 2) Set read protection for the block if possible (check write-protection for RD_DIS).
+ *    In this case, data becomes inaccessible, and the software reads it as all zeros.
+ * If write protection is enabled and read protection can not be set,
+ * data in the block remains readable (returns an error).
+ *
+ * Do not use the batch mode with this function as it does the burning itself!
+ *
+ * @param[in] block A key block in the range EFUSE_BLK_KEY0..EFUSE_BLK_KEY_MAX
+ *
+ * @return
+ *    - ESP_OK: Successful.
+ *    - ESP_FAIL: Data remained readable because the block is write-protected
+ *                and read protection can not be set.
+ */
+esp_err_t esp_efuse_destroy_block(esp_efuse_block_t block);
+
+#if SOC_ECDSA_SUPPORTED
+/**
+ * @brief Checks if 192-bit ECDSA curve operations are supported.
+ *
+ * This function checks if the current eFuse configuration supports 192-bit ECDSA curve operations.
+*/
+bool esp_efuse_is_ecdsa_p192_curve_supported(void);
+
+/**
+ * @brief Checks if 256-bit ECDSA curve operations are supported.
+ *
+ * This function checks if the current eFuse configuration supports 256-bit ECDSA curve operations.
+*/
+bool esp_efuse_is_ecdsa_p256_curve_supported(void);
+#endif /* SOC_ECDSA_SUPPORTED*/
+
+#if SOC_ECDSA_P192_CURVE_DEFAULT_DISABLED
+typedef enum {
+    ESP_EFUSE_ECDSA_CURVE_MODE_ALLOW_ONLY_P256_BIT = 0,
+    ESP_EFUSE_ECDSA_CURVE_MODE_ALLOW_ONLY_P192_BIT = 1,
+    ESP_EFUSE_ECDSA_CURVE_MODE_ALLOW_BOTH_P192_P256_BIT = 2,
+    ESP_EFUSE_ECDSA_CURVE_MODE_ALLOW_ONLY_P256_BIT_LOCKED = 3,
+} esp_efuse_ecdsa_curve_mode_t;
+
+/**
+ * @brief Enables 192-bit ECDSA curve operations by setting the appropriate eFuse value.
+ *
+ * This function enables support for 192-bit ECDSA curve operations by configuring the
+ * ECDSA curve mode eFuse. It checks the current curve mode and attempts to set it to
+ * allow both P192 and P256 operations if not already set.
+ *
+ * @return
+ *    - ESP_OK: Successfully enabled 192-bit ECDSA operations or already enabled
+ *    - ESP_FAIL: Failed to enable operations due to write protection
+ *    - Other error codes: Failed to read/write eFuse
+ */
+esp_err_t esp_efuse_enable_ecdsa_p192_curve_mode(void);
 #endif
 
 #ifdef __cplusplus

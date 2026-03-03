@@ -1,16 +1,8 @@
-// Copyright 2015-2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2025 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*******************************************************************************
  * NOTICE
@@ -36,6 +28,26 @@ extern "C" {
 typedef struct {
     uart_dev_t *dev;
 } uart_hal_context_t;
+
+/**
+ * @brief  Configure the UART baud-rate and select the source clock
+ *
+ * @param  hal Context of the HAL layer
+ * @param  baud_rate The baud-rate to be set
+ * @param  sclk_freq Frequency of the clock source of UART, in Hz.
+ *
+ * @return True if baud-rate set successfully; False if baud-rate requested cannot be achieved
+ */
+#define uart_hal_set_baudrate(hal, baud_rate, sclk_freq) uart_ll_set_baudrate((hal)->dev, baud_rate, sclk_freq)
+
+/**
+ * @brief Set the UART source clock type
+ * @param  hal Context of the HAL layer
+ * @param  sclk The UART source clock type.
+ *
+ * @return None
+ */
+#define uart_hal_set_sclk(hal, sclk) uart_ll_set_sclk((hal)->dev, sclk);
 
 /**
  * @brief Clear the UART interrupt status
@@ -68,6 +80,15 @@ typedef struct {
 #define uart_hal_ena_intr_mask(hal, mask)  uart_ll_ena_intr_mask((hal)->dev, mask)
 
 /**
+ * @brief Get the UART raw interrupt status
+ *
+ * @param  hal Context of the HAL layer
+ *
+ * @return UART raw interrupt status
+ */
+#define uart_hal_get_intraw_mask(hal) uart_ll_get_intraw_mask((hal)->dev)
+
+/**
  * @brief Get the UART interrupt status
  *
  * @param  hal Context of the HAL layer
@@ -84,6 +105,16 @@ typedef struct {
  * @return UART Interrupt enabled value
  */
 #define uart_hal_get_intr_ena_status(hal) uart_ll_get_intr_ena_status((hal)->dev)
+
+/**
+ * @brief Get the pointer to the UART interrupt status register
+ *
+ * @param  hal Context of the HAL layer
+ *
+ * @return UART interrupt status register
+ */
+#define uart_hal_get_intr_status_reg(hal) uart_ll_get_intr_status_reg((hal)->dev)
+
 
 /**
  * @brief Get the UART pattern char configuration
@@ -123,16 +154,6 @@ typedef struct {
  * @return True if the state machine is in the IDLE state, otherwise false will be returned.
  */
 #define uart_hal_is_tx_idle(hal)  uart_ll_is_tx_idle((hal)->dev)
-
-/**
- * @brief  Configure the UART core reset
- *
- * @param  hal Context of the HAL layer
- * @param  Set true to enable the core reset, otherwise set it false
- *
- * @return None
- */
-#define uart_hal_set_reset_core(hal, core_rst_en)  uart_ll_set_reset_core((hal)->dev, core_rst_en)
 
 /**
  * @brief  Read data from the UART rxfifo
@@ -188,33 +209,14 @@ void uart_hal_rxfifo_rst(uart_hal_context_t *hal);
 void uart_hal_init(uart_hal_context_t *hal, uart_port_t uart_num);
 
 /**
- * @brief Set the UART source clock type
- * @param  hal Context of the HAL layer
- * @param  sclk The UART source clock type.
- *
- * @return None
- */
-void uart_hal_set_sclk(uart_hal_context_t *hal, uart_sclk_t sclk);
-
-/**
  * @brief Get the UART source clock type
  *
  * @param  hal Context of the HAL layer
- * @param  sclk The poiter to accept the UART source clock type
+ * @param  sclk The pointer to accept the UART source clock type
  *
  * @return None
  */
-void uart_hal_get_sclk(uart_hal_context_t *hal, uart_sclk_t *sclk);
-
-/**
- * @brief  Configure the UART baud-rate and select the source clock
- *
- * @param  hal Context of the HAL layer
- * @param  baud_rate The baud-rate to be set
- *
- * @return None
- */
-void uart_hal_set_baudrate(uart_hal_context_t *hal, uint32_t baud_rate);
+void uart_hal_get_sclk(uart_hal_context_t *hal, soc_module_clk_t *sclk);
 
 /**
  * @brief  Configure the UART stop bit
@@ -349,7 +351,7 @@ void uart_hal_tx_break(uart_hal_context_t *hal, uint32_t break_num);
  *
  * @return None
  */
-void uart_hal_set_wakeup_thrd(uart_hal_context_t *hal, uint32_t wakeup_thrd);
+void uart_hal_set_wakeup_edge_thrd(uart_hal_context_t *hal, uint32_t wakeup_thrd);
 
 /**
  * @brief Configure the UART mode
@@ -365,7 +367,7 @@ void uart_hal_set_mode(uart_hal_context_t *hal, uart_mode_t mode);
  * @brief Configure the UART hardware to inverse the signals
  *
  * @param  hal Context of the HAL layer
- * @param  inv_mask The sigal mask needs to be inversed. Use the ORred mask of type `uart_signal_inv_t`
+ * @param  inv_mask The signal mask needs to be inversed. Use the ORred mask of type `uart_signal_inv_t`
  *
  * @return None
  */
@@ -379,7 +381,7 @@ void uart_hal_inverse_signal(uart_hal_context_t *hal, uint32_t inv_mask);
  *
  * @return None
  */
-void uart_hal_get_wakeup_thrd(uart_hal_context_t *hal, uint32_t *wakeup_thrd);
+void uart_hal_get_wakeup_edge_thrd(uart_hal_context_t *hal, uint32_t *wakeup_thrd);
 
 /**
  * @brief Get the UART data bit configuration
@@ -416,10 +418,11 @@ void uart_hal_get_parity(uart_hal_context_t *hal, uart_parity_t *parity_mode);
  *
  * @param  hal Context of the HAL layer
  * @param  baud_rate Pointer to accept the current baud-rate
+ * @param  sclk_freq Frequency of the clock source of UART, in Hz.
  *
  * @return None
  */
-void uart_hal_get_baudrate(uart_hal_context_t *hal, uint32_t *baud_rate);
+void uart_hal_get_baudrate(uart_hal_context_t *hal, uint32_t *baud_rate, uint32_t sclk_freq);
 
 /**
  * @brief Get the hw flow control configuration
@@ -444,7 +447,7 @@ bool uart_hal_is_hw_rts_en(uart_hal_context_t *hal);
  * @brief Configure TX signal loop back to RX module, just for the testing purposes
  *
  * @param  hal Context of the HAL layer
- * @param  loop_back_en Set ture to enable the loop back function, else set it false.
+ * @param  loop_back_en Set true to enable the loop back function, else set it false.
  *
  * @return None
  */
@@ -485,6 +488,49 @@ uint16_t uart_hal_get_max_rx_timeout_thrd(uart_hal_context_t *hal);
  * @return The readable data length in rxfifo.
  */
 #define uart_hal_get_rxfifo_len(hal) uart_ll_get_rxfifo_len((hal)->dev)
+
+/**
+ * @brief  Enable or disable the auto baudrate detection
+ *
+ * @param  hal Context of the HAL layer
+ * @param  enable Boolean marking whether the auto baudrate should be enabled or not
+ */
+#define uart_hal_set_autobaud_en(hal, enable) uart_ll_set_autobaud_en((hal)->dev, enable)
+
+/**
+ * @brief Get the positive pulse minimum count
+ *
+ * @param hal Context of the HAL layer
+ */
+#define uart_hal_get_pos_pulse_cnt(hal) uart_ll_get_pos_pulse_cnt((hal)->dev)
+
+/**
+ * @brief Get the negative pulse minimum count
+ *
+ * @param hal Context of the HAL layer
+ */
+#define uart_hal_get_neg_pulse_cnt(hal) uart_ll_get_neg_pulse_cnt((hal)->dev)
+
+/**
+ * @brief Get the high pulse minimum count
+ *
+ * @param hal Context of the HAL layer
+ */
+#define uart_hal_get_high_pulse_cnt(hal) uart_ll_get_high_pulse_cnt((hal)->dev)
+
+/**
+ * @brief Get the low pulse minimum count
+ *
+ * @param hal Context of the HAL layer
+ */
+#define uart_hal_get_low_pulse_cnt(hal) uart_ll_get_low_pulse_cnt((hal)->dev)
+
+/**
+ * @brief Get the RXD edge count
+ *
+ * @param hal Context of the HAL layer
+ */
+#define uart_hal_get_rxd_edge_cnt(hal) uart_ll_get_rxd_edge_cnt((hal)->dev)
 
 #ifdef __cplusplus
 }

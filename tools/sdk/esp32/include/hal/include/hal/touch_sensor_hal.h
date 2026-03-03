@@ -1,16 +1,8 @@
-// Copyright 2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*******************************************************************************
  * NOTICE
@@ -18,17 +10,21 @@
  * See readme.md in hal/include/hal/readme.md
  ******************************************************************************/
 
-// The HAL layer for touch sensor (common part)
+// The legacy HAL layer for touch sensor (common part)
 
 #pragma once
 
+#include "soc/soc_caps.h"
+#if SOC_TOUCH_SENSOR_SUPPORTED
 #include "hal/touch_sensor_ll.h"
-#include "hal/touch_sensor_types.h"
+#include "hal/touch_sensor_legacy_types.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#if SOC_TOUCH_SENSOR_SUPPORTED
 typedef struct {
     touch_high_volt_t refh;
     touch_low_volt_t refl;
@@ -58,22 +54,22 @@ typedef struct {
 #define touch_hal_get_sleep_time(sleep_time) touch_ll_get_sleep_time(sleep_time)
 
 /**
- * Set touch sensor high / low voltage threshold of chanrge.
+ * Set touch sensor high / low voltage threshold of charge.
  * The touch sensor measures the channel capacitance value by charging and discharging the channel.
  * So charge threshold should be less than the supply voltage.
  * The actual charge threshold is high voltage threshold minus attenuation value.
  *
- * @param refh The high voltage threshold of chanrge.
+ * @param refh The high voltage threshold of charge.
  */
 void touch_hal_set_voltage(const touch_hal_volt_t *volt);
 
 /**
- * Get touch sensor high / low voltage threshold of chanrge.
+ * Get touch sensor high / low voltage threshold of charge.
  * The touch sensor measures the channel capacitance value by charging and discharging the channel.
  * So charge threshold should be less than the supply voltage.
  * The actual charge threshold is high voltage threshold minus attenuation value.
  *
- * @param refh The voltage threshold of chanrge / discharge.
+ * @param refh The voltage threshold of charge / discharge.
  */
 void touch_hal_get_voltage(touch_hal_volt_t *volt);
 
@@ -199,7 +195,7 @@ void touch_hal_get_meas_mode(touch_pad_t touch_num, touch_hal_meas_mode_t *meas)
  * @return
  *      - If touch sensors measure done.
  */
-#define touch_hal_meas_is_done() touch_ll_meas_is_done()
+#define touch_hal_meas_is_done() touch_ll_is_measure_done()
 
 /**
  * Initialize touch module.
@@ -219,6 +215,8 @@ void touch_hal_deinit(void);
  * Configure touch sensor for each channel.
  */
 void touch_hal_config(touch_pad_t touch_num);
+
+#endif
 
 #ifdef __cplusplus
 }
