@@ -143,15 +143,6 @@ File::operator bool() const
     return _p != nullptr && *_p != false;
 }
 
-const char* File::path() const
-{
-    if (!*this) {
-        return nullptr;
-    }
-
-    return _p->path();
-}
-
 const char* File::name() const
 {
     if (!*this) {
@@ -186,18 +177,18 @@ void File::rewindDirectory(void)
     _p->rewindDirectory();
 }
 
-File FS::open(const String& path, const char* mode, const bool create)
+File FS::open(const String& path, const char* mode)
 {
-    return open(path.c_str(), mode, create);
+    return open(path.c_str(), mode);
 }
 
-File FS::open(const char* path, const char* mode, const bool create)
+File FS::open(const char* path, const char* mode)
 {
     if (!_impl) {
         return File();
     }
 
-    return File(_impl->open(path, mode, create));
+    return File(_impl->open(path, mode));
 }
 
 bool FS::exists(const char* path)

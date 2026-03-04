@@ -256,7 +256,7 @@ float Stream::parseFloat(char skipChar)
         } else if(c >= '0' && c <= '9') {    // is c a digit?
             value = value * 10 + c - '0';
             if(isFraction) {
-                fraction *= 0.1f;
+                fraction *= 0.1;
             }
         }
         read();  // consume the character we got with peek

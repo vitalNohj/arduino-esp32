@@ -56,7 +56,3 @@ void Ticker::detach() {
     _timer = nullptr;
   }
 }
-
-bool Ticker::active() {
-  return esp_timer_is_active(_timer);
-}

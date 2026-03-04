@@ -108,9 +108,6 @@ public:
     size_t println(const Printable&);
     size_t println(struct tm * timeinfo, const char * format = NULL);
     size_t println(void);
-    
-    virtual void flush() { /* Empty implementation for backward compatibility */ }
-    
 };
 
 #endif

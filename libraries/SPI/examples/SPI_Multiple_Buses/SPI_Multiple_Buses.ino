@@ -39,10 +39,6 @@
   #define HSPI_SS     15
 #endif
 
-#if CONFIG_IDF_TARGET_ESP32S2
-#define VSPI FSPI
-#endif
-
 static const int spiClk = 1000000; // 1 MHz
 
 //uninitalised pointers to SPI objects
@@ -76,24 +72,36 @@ void setup() {
 
   //set up slave select pins as outputs as the Arduino API
   //doesn't handle automatically pulling SS low
-  pinMode(vspi->pinSS(), OUTPUT); //VSPI SS
-  pinMode(hspi->pinSS(), OUTPUT); //HSPI SS
+  pinMode(VSPI_SS, OUTPUT); //VSPI SS
+  pinMode(HSPI_SS, OUTPUT); //HSPI SS
 
 }
 
 // the loop function runs over and over again until power down or reset
 void loop() {
   //use the SPI buses
-  spiCommand(vspi, 0b01010101); // junk data to illustrate usage
-  spiCommand(hspi, 0b11001100);
+  vspiCommand();
+  hspiCommand();
   delay(100);
 }
 
-void spiCommand(SPIClass *spi, byte data) {
+void vspiCommand() {
+  byte data = 0b01010101; // junk data to illustrate usage
+
   //use it as you would the regular arduino SPI API
-  spi->beginTransaction(SPISettings(spiClk, MSBFIRST, SPI_MODE0));
-  digitalWrite(spi->pinSS(), LOW); //pull SS slow to prep other end for transfer
-  spi->transfer(data);
-  digitalWrite(spi->pinSS(), HIGH); //pull ss high to signify end of data transfer
-  spi->endTransaction();
+  vspi->beginTransaction(SPISettings(spiClk, MSBFIRST, SPI_MODE0));
+  digitalWrite(VSPI_SS, LOW); //pull SS slow to prep other end for transfer
+  vspi->transfer(data);  
+  digitalWrite(VSPI_SS, HIGH); //pull ss high to signify end of data transfer
+  vspi->endTransaction();
+}
+
+void hspiCommand() {
+  byte stuff = 0b11001100;
+  
+  hspi->beginTransaction(SPISettings(spiClk, MSBFIRST, SPI_MODE0));
+  digitalWrite(HSPI_SS, LOW);
+  hspi->transfer(stuff);
+  digitalWrite(HSPI_SS, HIGH);
+  hspi->endTransaction();
 }

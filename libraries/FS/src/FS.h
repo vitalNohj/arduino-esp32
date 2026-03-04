@@ -73,7 +73,6 @@ public:
     void close();
     operator bool() const;
     time_t getLastWrite();
-    const char* path() const;
     const char* name() const;
 
     boolean isDirectory(void);
@@ -89,8 +88,8 @@ class FS
 public:
     FS(FSImplPtr impl) : _impl(impl) { }
 
-    File open(const char* path, const char* mode = FILE_READ, const bool create = false);
-    File open(const String& path, const char* mode = FILE_READ, const bool create = false);
+    File open(const char* path, const char* mode = FILE_READ);
+    File open(const String& path, const char* mode = FILE_READ);
 
     bool exists(const char* path);
     bool exists(const String& path);

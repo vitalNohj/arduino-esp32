@@ -59,7 +59,6 @@ WebServer::WebServer(IPAddress addr, int port)
 , _contentLength(0)
 , _chunked(false)
 {
-  log_v("WebServer::Webserver(addr=%s, port=%d)", addr.toString().c_str(), port);
 }
 
 WebServer::WebServer(int port)
@@ -82,7 +81,6 @@ WebServer::WebServer(int port)
 , _contentLength(0)
 , _chunked(false)
 {
-  log_v("WebServer::Webserver(port=%d)", port);
 }
 
 WebServer::~WebServer() {
@@ -125,9 +123,9 @@ static String md5str(String &in){
     return String(out);
   memset(_buf, 0x00, 16);
   mbedtls_md5_init(&_ctx);
-  mbedtls_md5_starts_ret(&_ctx);
-  mbedtls_md5_update_ret(&_ctx, (const uint8_t *)in.c_str(), in.length());
-  mbedtls_md5_finish_ret(&_ctx, _buf);
+  mbedtls_md5_starts(&_ctx);
+  mbedtls_md5_update(&_ctx, (const uint8_t *)in.c_str(), in.length());
+  mbedtls_md5_finish(&_ctx, _buf);
   for(i = 0; i < 16; i++) {
     sprintf(out + (i * 2), "%02x", _buf[i]);
   }
@@ -291,7 +289,7 @@ void WebServer::handleClient() {
       return;
     }
 
-    log_v("New client: client.localIP()=%s", client.localIP().toString().c_str());
+    log_v("New client");
 
     _currentClient = client;
     _currentStatus = HC_WAIT_READ;

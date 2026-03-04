@@ -16,35 +16,41 @@
 
 using namespace fs;
 
-FileImplPtr VFSImpl::open(const char* fpath, const char* mode, const bool create)
+FileImplPtr VFSImpl::open(const char* path, const char* mode)
 {
     if(!_mountpoint) {
         log_e("File system is not mounted");
         return FileImplPtr();
     }
 
-    if(!fpath || fpath[0] != '/') {
-        log_e("%s does not start with /", fpath);
+    if(!path || path[0] != '/') {
+        log_e("%s does not start with /", path);
         return FileImplPtr();
     }
 
-    char * temp = (char *)malloc(strlen(fpath)+strlen(_mountpoint)+2);
+    char * temp = (char *)malloc(strlen(path)+strlen(_mountpoint)+2);
     if(!temp) {
         log_e("malloc failed");
         return FileImplPtr();
     }
 
-    sprintf(temp,"%s%s", _mountpoint, fpath);
+    sprintf(temp,"%s%s", _mountpoint, path);
 
     struct stat st;
-    //file found
+    //file lound
     if(!stat(temp, &st)) {
         free(temp);
         if (S_ISREG(st.st_mode) || S_ISDIR(st.st_mode)) {
-            return std::make_shared<VFSFileImpl>(this, fpath, mode);
+            return std::make_shared<VFSFileImpl>(this, path, mode);
         }
-        log_e("%s has wrong mode 0x%08X", fpath, st.st_mode);
+        log_e("%s has wrong mode 0x%08X", path, st.st_mode);
         return FileImplPtr();
+    }
+
+    //file not found but mode permits creation
+    if(mode && mode[0] != 'r') {
+        free(temp);
+        return std::make_shared<VFSFileImpl>(this, path, mode);
     }
 
     //try to open this as directory (might be mount point)
@@ -52,66 +58,22 @@ FileImplPtr VFSImpl::open(const char* fpath, const char* mode, const bool create
     if(d) {
         closedir(d);
         free(temp);
-        return std::make_shared<VFSFileImpl>(this, fpath, mode);
+        return std::make_shared<VFSFileImpl>(this, path, mode);
     }
 
-    //file not found but mode permits file creation without folder creation
-    if((mode && mode[0] != 'r') && (!create)){
-        free(temp);
-        return std::make_shared<VFSFileImpl>(this, fpath, mode);
-    }
-
-    ////file not found but mode permits file creation and folder creation
-    if((mode && mode[0] != 'r') && create){
-
-        char *token;
-        char *folder = (char *)malloc(strlen(fpath));
-
-        int start_index = 0;
-        int end_index = 0;
-
-        token = strchr(fpath+1,'/');
-        end_index = (token-fpath);
-
-        while (token != NULL)
-        {
-            memcpy(folder,fpath + start_index, end_index-start_index);
-            folder[end_index-start_index] = '\0';
-            
-            if(!VFSImpl::mkdir(folder))
-            {
-                log_e("Creating folder: %s failed!",folder);
-                return FileImplPtr();
-            }
-
-            token=strchr(token+1,'/');
-            if(token != NULL)
-            {
-                end_index = (token-fpath);
-                memset(folder, 0, strlen(folder));
-            }
-            
-        }
-
-        free(folder);
-        free(temp);
-        return std::make_shared<VFSFileImpl>(this, fpath, mode);
-
-    }
-
-    log_e("%s does not exist, no permits for creation", temp);
+    log_e("%s does not exist", temp);
     free(temp);
     return FileImplPtr();
 }
 
-bool VFSImpl::exists(const char* fpath)
+bool VFSImpl::exists(const char* path)
 {
     if(!_mountpoint) {
         log_e("File system is not mounted");
         return false;
     }
 
-    VFSFileImpl f(this, fpath, "r");
+    VFSFileImpl f(this, path, "r");
     if(f) {
         f.close();
         return true;
@@ -153,69 +115,69 @@ bool VFSImpl::rename(const char* pathFrom, const char* pathTo)
     return rc == 0;
 }
 
-bool VFSImpl::remove(const char* fpath)
+bool VFSImpl::remove(const char* path)
 {
     if(!_mountpoint) {
         log_e("File system is not mounted");
         return false;
     }
 
-    if(!fpath || fpath[0] != '/') {
+    if(!path || path[0] != '/') {
         log_e("bad arguments");
         return false;
     }
 
-    VFSFileImpl f(this, fpath, "r");
+    VFSFileImpl f(this, path, "r");
     if(!f || f.isDirectory()) {
         if(f) {
             f.close();
         }
-        log_e("%s does not exists or is directory", fpath);
+        log_e("%s does not exists or is directory", path);
         return false;
     }
     f.close();
 
-    char * temp = (char *)malloc(strlen(fpath)+strlen(_mountpoint)+1);
+    char * temp = (char *)malloc(strlen(path)+strlen(_mountpoint)+1);
     if(!temp) {
         log_e("malloc failed");
         return false;
     }
-    sprintf(temp,"%s%s", _mountpoint, fpath);
+    sprintf(temp,"%s%s", _mountpoint, path);
     auto rc = unlink(temp);
     free(temp);
     return rc == 0;
 }
 
-bool VFSImpl::mkdir(const char *fpath)
+bool VFSImpl::mkdir(const char *path)
 {
     if(!_mountpoint) {
         log_e("File system is not mounted");
         return false;
     }
 
-    VFSFileImpl f(this, fpath, "r");
+    VFSFileImpl f(this, path, "r");
     if(f && f.isDirectory()) {
         f.close();
-        //log_w("%s already exists", fpath);
+        //log_w("%s already exists", path);
         return true;
     } else if(f) {
         f.close();
-        log_e("%s is a file", fpath);
+        log_e("%s is a file", path);
         return false;
     }
 
-    char * temp = (char *)malloc(strlen(fpath)+strlen(_mountpoint)+1);
+    char * temp = (char *)malloc(strlen(path)+strlen(_mountpoint)+1);
     if(!temp) {
         log_e("malloc failed");
         return false;
     }
-    sprintf(temp,"%s%s", _mountpoint, fpath);
+    sprintf(temp,"%s%s", _mountpoint, path);
     auto rc = ::mkdir(temp, ACCESSPERMS);
     free(temp);
     return rc == 0;
 }
 
-bool VFSImpl::rmdir(const char *fpath)
+bool VFSImpl::rmdir(const char *path)
 {
     if(!_mountpoint) {
         log_e("File system is not mounted");
@@ -227,22 +189,22 @@ bool VFSImpl::rmdir(const char *fpath)
         return false;
     }
 
-    VFSFileImpl f(this, fpath, "r");
+    VFSFileImpl f(this, path, "r");
     if(!f || !f.isDirectory()) {
         if(f) {
             f.close();
         }
-        log_e("%s does not exists or is a file", fpath);
+        log_e("%s does not exists or is a file", path);
         return false;
     }
     f.close();
 
-    char * temp = (char *)malloc(strlen(fpath)+strlen(_mountpoint)+1);
+    char * temp = (char *)malloc(strlen(path)+strlen(_mountpoint)+1);
     if(!temp) {
         log_e("malloc failed");
         return false;
     }
-    sprintf(temp,"%s%s", _mountpoint, fpath);
+    sprintf(temp,"%s%s", _mountpoint, path);
     auto rc = ::rmdir(temp);
     free(temp);
     return rc == 0;
@@ -251,7 +213,7 @@ bool VFSImpl::rmdir(const char *fpath)
 
 
 
-VFSFileImpl::VFSFileImpl(VFSImpl* fs, const char* fpath, const char* mode)
+VFSFileImpl::VFSFileImpl(VFSImpl* fs, const char* path, const char* mode)
     : _fs(fs)
     , _f(NULL)
     , _d(NULL)
@@ -259,15 +221,15 @@ VFSFileImpl::VFSFileImpl(VFSImpl* fs, const char* fpath, const char* mode)
     , _isDirectory(false)
     , _written(false)
 {
-    char * temp = (char *)malloc(strlen(fpath)+strlen(_fs->_mountpoint)+1);
+    char * temp = (char *)malloc(strlen(path)+strlen(_fs->_mountpoint)+1);
     if(!temp) {
         return;
     }
-    sprintf(temp,"%s%s", _fs->_mountpoint, fpath);
+    sprintf(temp,"%s%s", _fs->_mountpoint, path);
 
-    _path = strdup(fpath);
+    _path = strdup(path);
     if(!_path) {
-        log_e("strdup(%s) failed", fpath);
+        log_e("strdup(%s) failed", path);
         free(temp);
         return;
     }
@@ -415,14 +377,9 @@ size_t VFSFileImpl::size() const
     return _stat.st_size;
 }
 
-const char* VFSFileImpl::path() const
-{
-    return (const char*) _path;
-}
-
 const char* VFSFileImpl::name() const
 {
-    return pathToFileName(path());
+    return (const char*) _path;
 }
 
 //to implement

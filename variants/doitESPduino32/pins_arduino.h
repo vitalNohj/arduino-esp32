@@ -7,7 +7,7 @@
 #define NUM_DIGITAL_PINS        40
 #define NUM_ANALOG_INPUTS       16
 
-#define analogInputToDigitalPin(p)  (((p)<20)?(analogChannelToDigitalPin(p)):-1)
+#define analogInputToDigitalPin(p)  (((p)<20)?(esp32_adc2gpio[(p)]):-1)
 #define digitalPinToInterrupt(p)    (((p)<40)?(p):-1)
 #define digitalPinHasPWM(p)         (p < 34)
 
@@ -19,15 +19,10 @@ static const uint8_t SDA = 21;
 static const uint8_t SCL = 22;
 
 //SPI
-static const uint8_t IO5  = 5;  //SS
-static const uint8_t IO23 = 23; //MOSI
-static const uint8_t IO19 = 19; //MISO
-static const uint8_t IO18 = 18; //SCK
-
-static const uint8_t SS   = IO5;
-static const uint8_t MOSI = IO23;
-static const uint8_t MISO = IO19;
-static const uint8_t SCK  = IO18;
+static const uint8_t IO5    = 5; //SS
+static const uint8_t IO23  = 23; //MOSI
+static const uint8_t IO19  = 19; //MISO
+static const uint8_t IO18   = 18; //SCK
 
 //ANALOG
 static const uint8_t IO36 = 36;

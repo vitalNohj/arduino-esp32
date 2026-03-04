@@ -62,7 +62,7 @@ public:
 
     cbuf *next;
 
-protected:
+private:
     inline char* wrap_if_bufend(char* ptr) const
     {
         return (ptr == _bufend) ? _buf : ptr;

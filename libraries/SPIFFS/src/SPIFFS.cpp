@@ -39,7 +39,7 @@ SPIFFSImpl::SPIFFSImpl()
 
 bool SPIFFSImpl::exists(const char* path)
 {
-    File f = open(path, "r",false);
+    File f = open(path, "r");
     return (f == true) && !f.isDirectory();
 }
 

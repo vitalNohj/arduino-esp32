@@ -168,7 +168,7 @@ size_t F_Fat::freeBytes()
 
 bool F_Fat::exists(const char* path)
 {
-    File f = open(path, "r",false);
+    File f = open(path, "r");
     return (f == true) && !f.isDirectory();
 }
 
